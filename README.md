@@ -17,7 +17,7 @@ Built using **HTML, CSS, and JavaScript** with powerful animation libraries like
 
 ---
 
-### 🌲 AVL Tree (Self-Balancing BST)
+### 🌲 AVL Tree (Self Balancing BST)
 - Insert & Delete operations  
 - Automatic balancing with rotations  
 - Height & balance factor visualization  
