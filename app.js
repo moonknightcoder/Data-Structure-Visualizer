@@ -907,6 +907,7 @@ const graphViz = {
     this.edges = [];
     this.layoutNodes(count);
     this.draw();
+    addLog(`Graph reset with ${count} nodes (${this.isDirected ? "directed" : "undirected"})`, "info");
   },
   layoutNodes(count) {
     // Arrange in a circle
@@ -945,6 +946,7 @@ const graphViz = {
     let nextId = 0;
     while (this.nodes.find((n) => n.id === nextId)) nextId++;
 
+    addLog(`Adding vertex ${nextId}...`, "info");
     const centerX = this.canvas.width / 2;
     const centerY = this.canvas.height / 2;
 
@@ -958,7 +960,7 @@ const graphViz = {
 
     await this.animateNodeAppear(nextId);
     await this.animateLayoutTransition();
-
+    addLog(`Vertex ${nextId} added successfully`, "success");
     this.animating = false;
   },
   async removeVertex() {
@@ -967,29 +969,29 @@ const graphViz = {
 
     const id = parseInt(document.getElementById("vertex-to-remove").value);
     if (isNaN(id)) {
+      addLog("Please enter a valid node ID", "error");
       this.animating = false;
       return;
     }
 
     const idx = this.nodes.findIndex((n) => n.id === id);
     if (idx === -1) {
+      addLog(`Node ${id} not found`, "error");
       this.animating = false;
       return;
     }
 
-    // Animate connected edges disappearing first
+    addLog(`Removing vertex ${id}...`, "info");
     await this.animateEdgesDisappear(id);
-
-    // Animate node disappearing
     await this.animateNodeDisappear(id);
 
     this.nodes.splice(idx, 1);
     this.edges = this.edges.filter((e) => e.from !== id && e.to !== id);
 
-    // Animate layout transition
     await this.animateLayoutTransition();
 
     document.getElementById("vertex-to-remove").value = "";
+    addLog(`Vertex ${id} removed`, "success");
     this.animating = false;
   },
   async addEdge() {
@@ -1004,12 +1006,13 @@ const graphViz = {
       !this.nodes.find((n) => n.id === from) ||
       !this.nodes.find((n) => n.id === to)
     ) {
+      addLog(`Invalid nodes: ${from} or ${to} not found`, "error");
       this.animating = false;
       return;
     }
 
+    addLog(`Adding edge ${from} → ${to} (weight: ${weight})`, "info");
     this.edges = this.edges.filter((e) => !(e.from === from && e.to === to));
-
     this.edges.push({ from, to, weight, opacity: 0 });
     if (!this.isDirected) {
       this.edges = this.edges.filter((e) => !(e.from === to && e.to === from));
@@ -1017,6 +1020,7 @@ const graphViz = {
     }
 
     await this.animateEdgeAppear(from, to);
+    addLog(`Edge ${from} ↔ ${to} added`, "success");
     this.animating = false;
   },
   async removeEdge() {
@@ -1026,7 +1030,7 @@ const graphViz = {
     const from = parseInt(document.getElementById("edge-from").value);
     const to = parseInt(document.getElementById("edge-to").value);
 
-    // Animate edge disappearing
+    addLog(`Removing edge ${from} → ${to}...`, "info");
     await this.animateEdgeDisappear(from, to);
 
     this.edges = this.edges.filter((e) => !(e.from === from && e.to === to));
@@ -1035,6 +1039,7 @@ const graphViz = {
     }
 
     this.draw();
+    addLog(`Edge ${from} ↔ ${to} removed`, "success");
     this.animating = false;
   },
   async animateNodeDisappear(nodeId) {
@@ -1313,45 +1318,43 @@ const graphViz = {
 
     const start = parseInt(document.getElementById("algo-start").value);
     if (!this.nodes.find((n) => n.id === start)) {
+      addLog(`Start node ${start} not found`, "error");
       this.animating = false;
       return;
     }
 
+    addLog(`BFS starting from node ${start}`, "info");
     let queue = [start];
     let visited = new Set();
-    let traversalOrder = []; // ADD THIS - Track BFS order
+    let traversalOrder = [];
     visited.add(start);
 
     this.resetColors();
 
     while (queue.length > 0) {
-      // Show queue before dequeue
       this.draw();
       this.displayDataStructure("queue", queue);
       await new Promise((r) => setTimeout(r, 800));
 
-      const current = queue.shift(); // Dequeue
-      traversalOrder.push(current); // ADD THIS - Record order
+      const current = queue.shift();
+      traversalOrder.push(current);
+      addLog(`Visiting node ${current} | Queue: [${queue.join(", ")}]`, "info");
       const nodeObj = this.nodes.find((n) => n.id === current);
 
-      // Animate node exploration
       await this.animateNodeExplore(current, "#ff7675");
-
       if (nodeObj) nodeObj.color = "#ffeaa7";
 
-      // Find and animate edges
       for (const e of this.edges) {
         if (e.from === current && !visited.has(e.to)) {
           visited.add(e.to);
-          queue.push(e.to); // Enqueue
+          queue.push(e.to);
+          addLog(`  Enqueuing neighbor ${e.to}`, "info");
 
-          // Animate edge traversal
           await this.animateEdgeTraversal(e.from, e.to);
 
           const neighbor = this.nodes.find((n) => n.id === e.to);
           if (neighbor) neighbor.color = "#a29bfe";
 
-          // Show updated queue
           this.draw();
           this.displayDataStructure("queue", queue);
           await new Promise((r) => setTimeout(r, 400));
@@ -1359,9 +1362,9 @@ const graphViz = {
       }
     }
 
-    // Final draw with BFS order displayed
     this.draw();
-    this.displayTraversalOrder("BFS", traversalOrder); // ADD THIS
+    this.displayTraversalOrder("BFS", traversalOrder);
+    addLog(`BFS complete! Order: ${traversalOrder.join(" → ")}`, "success");
     this.animating = false;
   },
   async runDFS() {
@@ -1370,49 +1373,46 @@ const graphViz = {
 
     const start = parseInt(document.getElementById("algo-start").value);
     if (!this.nodes.find((n) => n.id === start)) {
+      addLog(`Start node ${start} not found`, "error");
       this.animating = false;
       return;
     }
 
+    addLog(`DFS starting from node ${start}`, "info");
     let stack = [start];
     let visited = new Set();
-    let traversalOrder = []; // ADD THIS - Track DFS order
+    let traversalOrder = [];
 
     this.resetColors();
 
     while (stack.length > 0) {
-      // Show stack before pop
       this.draw();
       this.displayDataStructure("stack", stack);
       await new Promise((r) => setTimeout(r, 800));
 
-      const current = stack.pop(); // Pop from stack
+      const current = stack.pop();
 
       if (!visited.has(current)) {
         visited.add(current);
-        traversalOrder.push(current); // ADD THIS - Record order
+        traversalOrder.push(current);
+        addLog(`Visiting node ${current} | Stack: [${stack.join(", ")}]`, "info");
 
-        // Animate node exploration
         await this.animateNodeExplore(current, "#ff7675");
 
         const nodeObj = this.nodes.find((n) => n.id === current);
         if (nodeObj) nodeObj.color = "#ffeaa7";
 
-        // Collect neighbors to push (in reverse for correct DFS order)
         const neighbors = [];
         for (const e of this.edges) {
           if (e.from === current && !visited.has(e.to)) {
             neighbors.push(e.to);
-
-            // Animate edge consideration
+            addLog(`  Pushing neighbor ${e.to} to stack`, "info");
             await this.animateEdgeTraversal(e.from, e.to);
           }
         }
 
-        // Push neighbors to stack
         neighbors.reverse().forEach((n) => stack.push(n));
 
-        // Show updated stack
         if (neighbors.length > 0) {
           this.draw();
           this.displayDataStructure("stack", stack);
@@ -1421,9 +1421,9 @@ const graphViz = {
       }
     }
 
-    // Final draw with DFS order displayed
     this.draw();
-    this.displayTraversalOrder("DFS", traversalOrder); // ADD THIS
+    this.displayTraversalOrder("DFS", traversalOrder);
+    addLog(`DFS complete! Order: ${traversalOrder.join(" → ")}`, "success");
     this.animating = false;
   },
   highlightShortestPathTree(previous, distances) {
@@ -1465,14 +1465,16 @@ const graphViz = {
     this.resetColors();
     const startId = parseInt(document.getElementById("algo-start").value);
     const startNode = this.nodes.find((n) => n.id === startId);
-    if (!startNode) return;
+    if (!startNode) {
+      addLog(`Start node ${startId} not found`, "error");
+      return;
+    }
 
-    // Data structures for Dijkstra's
+    addLog(`Dijkstra starting from node ${startId}`, "info");
     let distances = new Map();
     let previous = new Map();
-    let priorityQueue = []; // Array used as a min-priority queue (simulated by sorting)
+    let priorityQueue = [];
 
-    // Initialize
     this.nodes.forEach((node) => {
       distances.set(node.id, Infinity);
       previous.set(node.id, null);
@@ -1480,26 +1482,24 @@ const graphViz = {
 
     distances.set(startId, 0);
     priorityQueue.push({ id: startId, dist: 0 });
+    addLog(`Initial distances set. Start node ${startId} = 0`, "info");
 
-    startNode.color = "#00b894"; // Start Node
+    startNode.color = "#00b894";
     this.draw();
 
     while (priorityQueue.length > 0) {
-      // Sort the array to simulate Min-Heap (find min distance)
       priorityQueue.sort((a, b) => a.dist - b.dist);
       let { id: uId, dist: uDist } = priorityQueue.shift();
 
-      // Skip if a shorter path was already found (stale entry)
       if (uDist > distances.get(uId)) continue;
 
-      // Highlight current node being processed
+      addLog(`Processing node ${uId} (dist: ${uDist})`, "info");
       const uNode = this.nodes.find((n) => n.id === uId);
-      uNode.color = "#ff7675"; // Current Processing
+      uNode.color = "#ff7675";
       this.draw();
       await new Promise((r) => setTimeout(r, 600));
-      uNode.color = "#ffeaa7"; // Visited / Settled
+      uNode.color = "#ffeaa7";
 
-      // Find outgoing edges from u
       const neighbors = this.edges.filter((e) => e.from === uId);
 
       for (const edge of neighbors) {
@@ -1512,9 +1512,9 @@ const graphViz = {
           distances.set(vId, alt);
           previous.set(vId, uId);
           priorityQueue.push({ id: vId, dist: alt });
+          addLog(`  Updated node ${vId}: dist ${distances.get(vId)} → ${alt}`, "info");
 
-          // Highlight neighbor node being updated
-          if (vNode) vNode.color = "#a29bfe"; // Updated/In Queue
+          if (vNode) vNode.color = "#a29bfe";
           this.draw();
           await new Promise((r) => setTimeout(r, 300));
         }
@@ -1522,17 +1522,22 @@ const graphViz = {
       this.draw();
     }
 
-    // Optional: Draw the final shortest path tree using 'previous' map
     this.highlightShortestPathTree(previous, distances);
+    const result = [...distances.entries()].map(([id, d]) => `${id}:${d === Infinity ? '∞' : d}`).join(", ");
+    addLog(`Dijkstra complete! Distances: ${result}`, "success");
   },
   async runPrim() {
-    if (this.nodes.length === 0) return;
+    if (this.nodes.length === 0) {
+      addLog("No nodes in graph", "error");
+      return;
+    }
     this.resetColors();
 
-    let startNode = this.nodes[0].id; // Arbitrary start
+    let startNode = this.nodes[0].id;
     let visited = new Set([startNode]);
     let mstEdges = [];
 
+    addLog(`Prim's MST starting from node ${startNode}`, "info");
     this.nodes.find((n) => n.id === startNode).color = "#ffeaa7";
     this.draw();
 
@@ -1541,7 +1546,6 @@ const graphViz = {
       let minEdge = null;
       let minWeight = Infinity;
 
-      // Find smallest edge connecting Visited to Unvisited
       for (const edge of this.edges) {
         if (visited.has(edge.from) && !visited.has(edge.to)) {
           if (edge.weight < minWeight) {
@@ -1549,12 +1553,7 @@ const graphViz = {
             minEdge = edge;
           }
         }
-        // Handle undirected nature explicitly if graph is undirected
-        if (
-          !this.isDirected &&
-          visited.has(edge.to) &&
-          !visited.has(edge.from)
-        ) {
+        if (!this.isDirected && visited.has(edge.to) && !visited.has(edge.from)) {
           if (edge.weight < minWeight) {
             minWeight = edge.weight;
             minEdge = { from: edge.to, to: edge.from, weight: edge.weight };
@@ -1565,13 +1564,15 @@ const graphViz = {
       if (minEdge) {
         visited.add(minEdge.to);
         mstEdges.push(minEdge);
+        addLog(`MST edge: ${minEdge.from} → ${minEdge.to} (weight: ${minEdge.weight})`, "info");
         this.nodes.find((n) => n.id === minEdge.to).color = "#ffeaa7";
-        // Highlight edge logic would go here (complex to draw selectively)
-        this.draw(mstEdges); // Pass MST edges to draw specially
+        this.draw(mstEdges);
       } else {
-        break; // Disconnected graph
+        addLog("Graph is disconnected — MST incomplete", "error");
+        break;
       }
     }
+    addLog(`Prim's MST complete! ${mstEdges.length} edges in MST`, "success");
   },
   resetColors() {
     this.nodes.forEach((n) => (n.color = "#55efc4"));
@@ -1753,34 +1754,26 @@ const hashViz = {
     this.animating = true;
 
     const keyInput = document.getElementById("hash-key");
-    const valInput = document.getElementById("hash-value");
     const key = parseInt(keyInput.value);
-    const value = valInput.value === "" ? key : valInput.value;
 
     if (isNaN(key)) {
-      addLog("Please enter a valid key", "error"); // LOG ADDED
+      addLog("Please enter a valid key", "error");
       this.animating = false;
       return;
     }
 
-    addLog(`Inserting key ${key}...`, "info"); // LOG ADDED
+    addLog(`Inserting key ${key}...`, "info");
     const index = this.hashFunction(key);
-    addLog(`Hash function: ${key} % ${this.size} = ${index}`, "info"); // LOG ADDED
+    addLog(`Hash function: ${key} % ${this.size} = ${index}`, "info");
 
-    // Animate hash calculation
     await this.animateHashCalculation(key, index);
 
     let current = this.table[index];
 
     while (current) {
       if (current.key === key) {
-        current.val = value;
         await this.animateCollisionUpdate(current);
-        addLog(
-          `Key ${key} already exists at index ${index} → Updated value`,
-          "warning"
-        ); // LOG ADDED
-        alert(`Key ${key} already exists at index ${index}`);
+        addLog(`Key ${key} already exists at index ${index}`, "warning");
         this.draw();
         this.animating = false;
         return;
@@ -1788,22 +1781,19 @@ const hashViz = {
       current = current.next;
     }
 
-    // Check if collision occurred
     if (this.table[index] !== null) {
-      addLog(`Collision detected at index ${index} → Chaining...`, "warning"); // LOG ADDED
+      addLog(`Collision at index ${index} → Chaining new node`, "warning");
     }
 
-    const newNode = { key: key, val: value, next: null, scale: 0, opacity: 0 };
+    const newNode = { key: key, val: key, next: null, scale: 0, opacity: 0 };
     newNode.next = this.table[index];
     this.table[index] = newNode;
 
-    // Animate new node insertion
     await this.animateNodeInsertion(newNode, index);
 
-    addLog(`Key ${key} inserted successfully at index ${index}`, "success"); // LOG ADDED
+    addLog(`Key ${key} inserted at index ${index}`, "success");
 
     keyInput.value = "";
-    valInput.value = "";
     this.draw();
     this.animating = false;
   },
@@ -1950,6 +1940,9 @@ const hashViz = {
   async animateNotFound(index) {
     return new Promise((resolve) => {
       const ctx = this.canvas.getContext("2d");
+      const boxH = 42;
+      const rowGap = 4;
+      const startY = 10;
       anime({
         targets: { opacity: 1 },
         opacity: 0,
@@ -1959,8 +1952,7 @@ const hashViz = {
           this.draw();
           ctx.save();
           ctx.fillStyle = `rgba(255, 107, 107, ${anim.progress / 100})`;
-          const boxH = 50;
-          const y = 30 + index * (boxH + 5);
+          const y = startY + index * (boxH + rowGap);
           ctx.fillRect(0, y, this.canvas.width, boxH);
           ctx.restore();
         },
@@ -1970,18 +1962,16 @@ const hashViz = {
   },
 
   init() {
-    this.resize();
-    window.addEventListener("resize", () => this.resize());
-    addLog("Hash Table initialized (size: 10)", "info"); // LOG ADDED
+    if (!this._resizeListenerAdded) {
+      window.addEventListener("resize", () => this.draw());
+      this._resizeListenerAdded = true;
+    }
+    this.draw();
+    addLog("Hash Table initialized (size: 10)", "info");
   },
 
   resize() {
-    const container = document.getElementById("hash-container");
-    if (container && this.canvas) {
-      this.canvas.width = container.clientWidth;
-      this.canvas.height = container.clientHeight;
-      this.draw();
-    }
+    this.draw();
   },
 
   clear() {
@@ -1991,77 +1981,99 @@ const hashViz = {
   },
 
   draw() {
+    const boxW = 120;
+    const boxH = 42;
+    const indexW = 45;
+    const colGap = 8;
+    const rowGap = 4;
+    const startY = 10;
+
+    // Fixed internal size — CSS width:100% stretches it visually
+    this.canvas.width = 600;
+    this.canvas.height = startY + this.size * (boxH + rowGap) + 10;
+
     const ctx = this.canvas.getContext("2d");
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    const boxW = 80;
-    const boxH = 50;
-    const startX = (this.canvas.width - boxW) / 2;
-    const startY = 30;
+    // Center the index+box block horizontally
+    const blockW = indexW + colGap + boxW;
+    const startX = Math.max(20, (this.canvas.width - blockW) / 2);
+    const boxX = startX + indexW + colGap;
 
-    // Drawing logic for the table array
     this.table.forEach((head, i) => {
-      const y = startY + i * (boxH + 5);
+      const y = startY + i * (boxH + rowGap);
 
-      // Draw Index
-      ctx.fillStyle = "#636e72";
-      ctx.fillRect(startX - 40, y, 30, boxH);
-      ctx.fillStyle = "#fff";
+      // Index cell
+      ctx.fillStyle = "#4a5568";
+      ctx.strokeStyle = "#718096";
+      ctx.lineWidth = 1;
+      ctx.fillRect(startX, y, indexW, boxH);
+      ctx.strokeRect(startX, y, indexW, boxH);
+      ctx.fillStyle = "#e2e8f0";
+      ctx.font = "bold 15px Arial";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(i, startX - 25, y + boxH / 2);
+      ctx.fillText(i, startX + indexW / 2, y + boxH / 2);
 
-      // Draw Chain (Nodes are now linked lists)
-      let current = head;
-      let currentX = startX;
-      while (current) {
-        // Draw Node with animation support
-        const scale = current.scale || 1;
-        const opacity = current.opacity !== undefined ? current.opacity : 1;
-        const scaledW = boxW * scale;
-        const scaledH = boxH * scale;
-        const offsetX = (boxW - scaledW) / 2;
-        const offsetY = (boxH - scaledH) / 2;
-
-        ctx.save();
-        ctx.globalAlpha = opacity;
-        ctx.fillStyle = current.highlight ? "#e74c3c" : "#ff9f43";
-        ctx.strokeStyle = "#fff";
-        ctx.lineWidth = current.highlight ? 3 : 1;
-        ctx.fillRect(currentX + offsetX, y + offsetY, scaledW, scaledH);
-        ctx.strokeRect(currentX + offsetX, y + offsetY, scaledW, scaledH);
-
-        // Draw Key/Value Text
-        ctx.fillStyle = "#fff";
-        ctx.font = "12px Arial";
+      if (!head) {
+        // NULL cell
+        ctx.fillStyle = "#2d3748";
+        ctx.strokeStyle = "#4a5568";
+        ctx.lineWidth = 1;
+        ctx.fillRect(boxX, y, boxW, boxH);
+        ctx.strokeRect(boxX, y, boxW, boxH);
+        ctx.fillStyle = "#718096";
+        ctx.font = "13px Arial";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(`K:${current.key}`, currentX + boxW / 2, y + boxH / 3);
-        ctx.fillText(
-          `V:${current.val}`,
-          currentX + boxW / 2,
-          y + (boxH / 3) * 2
-        );
-        ctx.restore();
+        ctx.fillText("NULL", boxX + boxW / 2, y + boxH / 2);
+      } else {
+        // Draw chained nodes
+        let current = head;
+        let cx = boxX;
+        while (current) {
+          const scale = current.scale || 1;
+          const opacity = current.opacity !== undefined ? current.opacity : 1;
+          const sw = boxW * scale;
+          const sh = boxH * scale;
+          const ox = (boxW - sw) / 2;
+          const oy = (boxH - sh) / 2;
 
-        // Draw Link (Arrow) to next node if it exists
-        if (current.next) {
-          ctx.beginPath();
-          ctx.moveTo(currentX + boxW, y + boxH / 2);
-          ctx.lineTo(currentX + boxW + 20, y + boxH / 2);
-          ctx.stroke();
+          ctx.save();
+          ctx.globalAlpha = opacity;
+          ctx.fillStyle = current.highlight ? "#e74c3c" : "#e67e22";
+          ctx.strokeStyle = "#fff";
+          ctx.lineWidth = current.highlight ? 3 : 1;
+          ctx.fillRect(cx + ox, y + oy, sw, sh);
+          ctx.strokeRect(cx + ox, y + oy, sw, sh);
+
+          ctx.fillStyle = "#fff";
+          ctx.font = "bold 13px Arial";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(`${current.key}`, cx + boxW / 2, y + boxH / 2);
+          ctx.restore();
+
+          if (current.next) {
+            // Arrow to next
+            ctx.strokeStyle = "#a0aec0";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(cx + boxW + 2, y + boxH / 2);
+            ctx.lineTo(cx + boxW + 18, y + boxH / 2);
+            ctx.stroke();
+            // Arrowhead
+            ctx.fillStyle = "#a0aec0";
+            ctx.beginPath();
+            ctx.moveTo(cx + boxW + 18, y + boxH / 2 - 4);
+            ctx.lineTo(cx + boxW + 25, y + boxH / 2);
+            ctx.lineTo(cx + boxW + 18, y + boxH / 2 + 4);
+            ctx.fill();
+          }
+
+          cx += boxW + 25;
+          current = current.next;
         }
-
-        currentX += boxW + 20;
-        current = current.next;
-      }
-      // Draw Empty Box if chain is null
-      if (!head) {
-        ctx.fillStyle = "#2d3436";
-        ctx.fillRect(startX, y, boxW, boxH);
-        ctx.strokeRect(startX, y, boxW, boxH);
-        ctx.fillStyle = "#fff";
-        ctx.fillText("NULL", startX + boxW / 2, y + boxH / 2);
       }
     });
   },
@@ -2575,7 +2587,8 @@ window.addEventListener("resize", () => {
   };
 
   // Make resize functions more forgiving by wrapping them (best-effort)
-  ['heapViz','avlViz','graphViz','hashViz'].forEach(function(name){
+  // NOTE: hashViz is excluded — it uses fixed internal canvas size, no container measurement needed
+  ['heapViz','avlViz','graphViz'].forEach(function(name){
     try {
       var obj = window[name];
       if (obj && typeof obj.resize === 'function') {
