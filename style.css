@@ -431,28 +431,20 @@ canvas.viz-canvas {
    HASH TABLE SPECIFIC FIXES (From khiz.css)
    ========================================= */
 
-/* Use flex layout for proper top alignment and scrolling */
 #hashTablePage .canvas-container {
     display: flex !important;
     flex-direction: column;
-    justify-content: flex-start; /* Align canvas to top */
-    align-items: center; /* Center canvas horizontally */
-    overflow-y: auto !important; /* Force scroll capability */
-    padding-top: 20px;
-    padding-bottom: 60px; /* Space to see the last item comfortably */
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    padding: 0;
 }
 
 #hashCanvas {
     display: block;
-    margin: 0 auto;
-    
-    /* VITAL: Fixed sizes to ensure visibility at start */
     width: auto !important;
-    height: auto !important;
-    min-height: 600px; /* Force it to have height so it's not hidden */
     max-width: 100%;
-    
-    transform: none !important; /* No scaling */
+    transform: none !important;
     image-rendering: pixelated; 
 }
 
